@@ -23,11 +23,27 @@ SOURCES = {
     "hotchips": ["Hot Chips 2026 발표 보도 — HBM 패키징·하이브리드 본딩(TechNews, 2026-08-24)", "https://technews.tw/2026/08/24/sk-hynix-hot-chips-2026-hbm/"],
     "seal": ["SK하이닉스 뉴스룸 — 몰딩(봉지) 공정 소개 칼럼", ""],
     "notice": ["2026 하반기 채용 공고의 지원서 작성 안내(조사 기록 기준 — 정확한 문구는 공고에서 다시 확인하세요)", ""],
+    "gong": ["SK Careers — '26년 하반기 Talent hy-way 기술사무직 신입 공고", "https://www.skcareers.com/Recruit/Detail/R261762"],
+    "nr_thw": ["SK하이닉스 뉴스룸 — 채용설명회 현장 스케치(2026-08)", "https://news.skhynix.co.kr/talent-hy-way-recruiting-2026/"],
+    "nr_press": ["SK하이닉스 뉴스룸 — 반나절 심층면접 도입 보도자료(2026-07-30)", "https://news.skhynix.co.kr/ai-talent-recruit-2026-02/"],
+    "etnews": ["전자신문 — 채용설명회 전형 안내 보도(2026-08-19)", "https://www.etnews.com/20260819000196"],
+    "inews": ["아이뉴스24 — 신입 채용 담당자 설명 보도(2026-08-27)", "https://inews24.com/view/1999139"],
+    "econo": ["이코노믹리뷰 — SEDEX 2026 약식 채용설명회 보도(2026-10-14)", "https://www.econovill.com/news/articleView.html?idxno=753633"],
+    "thub": ["SK hynix Talent Hub — 채용 절차 안내", "https://talent.skhynix.com/hub/ko/apply/process"],
+    "ask26": ["링커리어 — 2026 상반기 A!SK 응시 후기", "https://community.linkareer.com/pass-review/5867336"],
+    "ask25": ["링커리어 — 2025 하반기 SKCT·A!SK 응시 후기", "https://community.linkareer.com/pass-review/5586566"],
+    "hack": ["SK하이닉스 뉴스룸 — AI 해커톤 2026 안내", "https://news.skhynix.co.kr/ai-hackathon-2026/"],
+    "hackblog": ["AI 해커톤 온라인 예선 응시자 후기(개인 블로그, 2026-10-18)", "https://ruby-kim.github.io/2026/10/18/Retrospect/Hackathon/26-sk-ai/"],
+    "cofa": ["머니투데이 — AI 협업 평가 솔루션 보도(2026-08-28)", "https://www.mt.co.kr/tech/2026/08/28/2026082810491742468"],
+    "gaia": ["SK하이닉스 뉴스룸 — GaiA 기반 AI Agent 소개", "https://news.skhynix.co.kr/gaia_ep1_biz_ai_agent/"],
+    "forum": ["EBN — SK하이닉스 2026 미래포럼 보도", "https://www.ebn.co.kr/news/articleView.html?idxno=1723533"],
+    "oldpt": ["잡코리아 — 과거 SK하이닉스 PT 면접 후기 모음", "https://www.jobkorea.co.kr/Starter/review/view?C_Idx=42&Ctgr_Code=3"],
+    "linkhd": ["링커리어 — Half-Day 면접 정리 글(2026-10)", "https://community.linkareer.com/employment_data/6655411"],
     "comm": ["취업 커뮤니티의 면접 후기·현직자 답변(잡플래닛·코멘토 등, 이전 통합 면접 시기 포함)", ""],
     "gen": ["교과서 수준의 일반 전공 지식 — 면접 전에 본인이 한 번 더 확인하세요", ""],
 }
 
-LIST_FIELDS = {"why", "p", "k", "f", "s", "data", "ask", "pro", "con", "opp"}
+LIST_FIELDS = {"why", "p", "k", "f", "s", "data", "ask", "pro", "con", "opp", "line", "ai"}
 
 
 def parse(path):
@@ -69,12 +85,18 @@ def parse(path):
 
 
 def main():
-    Q, PT, GD = [], [], []
+    Q, PT, GD, AIV, PRM, XA = [], [], [], [], [], []
     for f in sorted((SRC_DIR / "data").glob("*.txt")):
         for r in parse(f):
             rid = r["id"]
             if rid.startswith("PT"):
                 PT.append(r)
+            elif rid.startswith("PR"):
+                PRM.append(r)
+            elif rid.startswith("AV"):
+                AIV.append(r)
+            elif rid.startswith("XA"):
+                XA.append(r)
             elif rid.startswith("G"):
                 GD.append(r)
             else:
@@ -117,18 +139,59 @@ def main():
         for s in r.get("s", []):
             if s not in SOURCES:
                 errors.append(f"{r['id']}: unknown source {s}")
+    ptmap = {r["id"]: r for r in PT}
+    for x in XA:
+        ents = []
+        for e in x.get("ai", []):
+            head, *rest = e.split("\n")
+            parts = [t.strip() for t in head.split("::")]
+            if len(parts) != 3 or parts[2] not in ("ok", "num", "sure", "limit", "gen"):
+                errors.append(f"{x['id']}: bad @ai head: {head}")
+                continue
+            try:
+                re.compile(parts[0])
+            except re.error as ex:
+                errors.append(f"{x['id']}: regex {parts[0]}: {ex}")
+            ans = " ".join(l.strip() for l in rest if l.strip() and not l.startswith(">>"))
+            note = " ".join(l[2:].strip() for l in rest if l.startswith(">>"))
+            if not ans or not note:
+                errors.append(f"{x['id']}: @ai needs answer and note: {head}")
+            ents.append([parts[0], parts[1], parts[2], ans, note])
+        if x.get("for") not in ptmap:
+            errors.append(f"{x['id']}: unknown @for {x.get('for')}")
+        else:
+            ptmap[x["for"]]["ai"] = ents
+    for r in AIV:
+        lines = []
+        for l in r.get("line", []):
+            mark, _, rest = l.partition(" ")
+            text, _, note = rest.partition("::")
+            if mark not in ("o", "x", "q") or (mark != "o" and not note.strip()):
+                errors.append(f"{r['id']}: bad @line {l[:30]}")
+            lines.append([mark, text.strip(), note.strip()])
+        r["line"] = lines
+        for need in ("title", "ctx", "say"):
+            if need not in r:
+                errors.append(f"{r['id']}: missing @{need}")
+        for sk in r.get("s", []):
+            if sk not in SOURCES:
+                errors.append(f"{r['id']}: unknown source {sk}")
+    for r in PRM:
+        for need in ("title", "ctx", "goal", "bad", "badwhy", "good", "goodwhy"):
+            if need not in r:
+                errors.append(f"{r['id']}: missing @{need}")
     if errors:
         print("\n".join(errors))
         sys.exit(1)
 
-    blob = "\n".join(json.dumps(x, ensure_ascii=False) for x in Q + PT + GD)
+    blob = "\n".join(json.dumps(x, ensure_ascii=False) for x in Q + PT + GD + AIV + PRM)
     for bad in ("아령", "삼성SDI", "삼성 SDI", "노아령", "weneewenee@"):
         if bad in blob:
             sys.exit(f"개인정보 문자열 발견: {bad}")
 
-    data = {"Q": Q, "PT": PT, "GD": GD, "SRC": SOURCES,
+    data = {"Q": Q, "PT": PT, "GD": GD, "AIV": AIV, "PRM": PRM, "SRC": SOURCES,
             "built": datetime.date.today().isoformat()}
-    js = "".join((SRC_DIR / n).read_text(encoding="utf-8") for n in ("app1.js", "app2.js", "app3.js"))
+    js = "".join((SRC_DIR / n).read_text(encoding="utf-8") for n in ("app1.js", "app2.js", "app3.js", "app4.js"))
     css = (SRC_DIR / "app.css").read_text(encoding="utf-8")
     body = (SRC_DIR / "app.html").read_text(encoding="utf-8")
     payload = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
@@ -154,7 +217,7 @@ const D = {payload};
 </html>
 """
     OUT.write_text(html, encoding="utf-8")
-    print(f"OK  Q={len(Q)} PT={len(PT)} GD={len(GD)}  -> {OUT} ({len(html.encode('utf-8'))//1024} KB)")
+    print(f"OK  Q={len(Q)} PT={len(PT)} GD={len(GD)} AIV={len(AIV)} PRM={len(PRM)}  -> {OUT} ({len(html.encode('utf-8'))//1024} KB)")
     cats = {}
     for r in Q:
         cats[r["c"]] = cats.get(r["c"], 0) + 1

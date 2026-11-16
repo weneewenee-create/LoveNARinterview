@@ -14,45 +14,6 @@ function openExternal(){
   toast('오른쪽 아래(또는 위)의 ··· 메뉴에서 "Safari로 열기"를 눌러 주세요.',6000);
 }
 function modeCard(no,id,title,desc,meta){return `<button class="mode" type="button" data-mode="${id}"><span class="no">${no}</span><h3>${title}</h3><p>${desc}</p><span class="meta">${meta}</span></button>`}
-function renderHome(){
-  const nLast=D.Q.filter(q=>store.get('last.'+q.id)).length;
-  view().innerHTML=`
-  <section class="hero">
-    <h1>반나절 면접, 구성 그대로 연습하기</h1>
-    <p>실제 Half-Day 면접의 네 구성(문제해결 PT · 심층 인터뷰 · Group Discussion · A!SK)에 맞춰 말로 답하고, 바로 채점과 예시 답변을 확인합니다. 로그인은 필요 없고, 답변은 이 기기에만 저장됩니다.</p>
-  </section>
-  ${inApp?`<div class="notice"><b>지금 메신저 안에서 열려 있어요.</b> 이 상태에서는 "말로 답하기"가 안 될 수 있습니다. Chrome이나 Safari에서 열어 주세요.<div class="row" style="margin-top:8px"><button class="btn pri" id="extBtn" type="button">기본 브라우저로 열기</button></div></div>`:''}
-  ${!SR&&!inApp?`<div class="notice"><b>이 브라우저는 음성 인식을 지원하지 않아요.</b> 답변 칸을 누른 뒤 키보드의 마이크(받아쓰기) 버튼으로 말하면 똑같이 연습할 수 있습니다. PC에서는 Chrome을 권장합니다.</div>`:''}
-  <div class="sec-title">실전 모드 — 면접 구성 그대로</div>
-  <div class="grid">
-    ${modeCard('STEP 1','pt','문제해결 PT','직무 시나리오를 읽고 답안을 정리한 뒤, 발표하고 면접관의 반박에 답합니다.','시나리오 '+D.PT.length+'개 · 준비 15~40분 · 발표 3분 · 후속 질문')}
-    ${modeCard('STEP 2','deep','심층 인터뷰','지원서를 파고드는 질문과 꼬리질문. 답할 때마다 채점과 예시 답변을 봅니다.','7문항 약 20분 · 13문항 약 40분')}
-    ${modeCard('STEP 3','gd','Group Discussion','정답 없는 주제로 첫 발언 → 상대 의견 받아 잇기 → 정리 발언을 연습합니다.','주제 '+D.GD.length+'개 · 혼자 연습 약 6분')}
-    ${modeCard('STEP 4','ask','A!SK 모의','화면에 질문이 뜨고 시간이 끝나면 자동으로 넘어갑니다. 결과는 끝난 뒤 한꺼번에.','인성 3 + 직무 4문항 · 약 12분')}
-  </div>
-  <div class="sec-title">공부 모드</div>
-  <div class="grid">
-    ${modeCard('연습','free','자유 연습','분야를 골라 한 문항씩. 약한 분야만 반복할 때 씁니다.','전체 '+D.Q.length+'문항 · 연습한 문항 '+nLast+'개')}
-    ${modeCard('읽기','book','질문·답안 노트','모든 질문의 의도, 답변 포인트, 예시 답변(핵심어는 빨간 굵은 글씨)을 한눈에.','기출 · 단골 · 지원서 · 예상 구분')}
-    ${modeCard('준비','notes','내 숫자 노트','예시 답변의 노란 칸(직접 채울 것)을 미리 정리해 두는 곳입니다.','이 기기에만 저장')}
-    ${modeCard('기록','hist','연습 기록·내보내기','지난 연습의 답변을 복사해서 보내면 피드백을 받을 수 있습니다.','최근 20회 보관')}
-  </div>
-  <div class="sec-title">먼저 읽어 두기</div>
-  ${infoStructure()}${infoRisk()}${infoHowto()}${infoLimits()}
-  <div class="foot">이 페이지는 검색에 노출되지 않도록 설정되어 있고, 입력한 내용은 어디로도 전송되지 않습니다. 자동 채점은 핵심어와 길이를 보는 참고용이며, 실제 평가 기준이 아닙니다. · 자료 정리일 ${esc(D.built)}</div>`;
-  $$('.mode').forEach(b=>b.onclick=()=>go(renderSetup,b.dataset.mode));
-  const e=$('#extBtn');if(e)e.onclick=openExternal;
-}
-function infoStructure(){return `<details class="card"><summary>Half-Day 면접은 이렇게 진행됩니다</summary><div class="body">
-  <table class="t">
-    <tr><th>문제해결 PT</th><td>면접장 PC의 AI 에디터(전용 LLM)로 직무 시나리오 과제를 풀어 PT 자료를 만들고, 심층 인터뷰에서 발표합니다. LLM을 능숙하게 쓰는지가 아니라 <b>과제를 어떻게 정의하고 해결하는지</b>를 본다고 안내했습니다.</td></tr>
-    <tr><th>심층 인터뷰</th><td>PT 발표와 질의응답에 이어, 지원서의 경험·경력을 꼬리질문으로 깊이 확인합니다.</td></tr>
-    <tr><th>Group Discussion</th><td>정답 없는 인문학적 주제로 토론합니다. 다른 의견을 받아들이고 함께 결론을 만드는 모습을 봅니다.</td></tr>
-    <tr><th>A!SK</th><td>면접장 안 별도 공간에서 화면의 질문에 답하는 비대면 방식입니다. 직무 기초 지식과 인성을 묻고, 정답보다 <b>아는 지식으로 풀어 가는 과정</b>을 본다고 안내했습니다.</td></tr>
-    <tr><th>함께 보는 것</th><td>직무 전문성과 3대 미래 역량: 본질적 탐구 역량, 변화 적응력, 사고적 다양성</td></tr>
-  </table>
-  <p class="small">세부 순서와 시간은 공개되지 않았습니다. 면접 안내 메일의 내용이 이 페이지와 다르면 메일이 맞습니다.</p>
-  ${srcHtml(['half1','press'])}</div></details>`}
 function infoRisk(){return `<details class="card"><summary>지원서에서 반드시 준비할 여섯 가지</summary><div class="body"><ul class="clean">
   <li><b>숫자가 없습니다.</b> "목표 스펙 이내"만 있습니다. 보안상 절댓값은 못 밝혀도, 상대값(몇 % 줄었다)과 판정 기준은 준비해야 합니다.</li>
   <li><b>단정 표현.</b> "완벽히 달성", "100% 전환", "강력한 무기", "비약적으로"는 근거를 묻는 질문을 부릅니다. 면접에서는 한 단계 낮춰 말하세요.</li>
@@ -69,15 +30,6 @@ function infoHowto(){return `<details class="card"><summary>쓰는 법과 주의
   <li>예시 답변을 외우지 마세요. 핵심어만 기억하고 본인 말로 하는 편이 꼬리질문에 강합니다.</li>
   <li>연습이 끝나면 <b>답안 내보내기</b>로 복사해서 보내 주세요. 사람이 읽고 꼬리질문과 피드백을 더해 줄 수 있습니다.</li>
   <li>현 직장의 소재명, 조건값, 스펙 수치는 여기에도, 면접에서도 말하지 않는 것이 안전합니다.</li>
-  </ul></div></details>`}
-function infoLimits(){return `<details class="card"><summary>이 자료의 근거와 한계</summary><div class="body"><ul class="clean">
-  <li><span class="tag t-기출">기출</span> 이전 통합 면접 시기를 포함한 면접 후기에서 확인된 질문입니다. 문장은 다듬었습니다.</li>
-  <li><span class="tag t-단골">단골</span> 현직자가 PKG 직무 면접에서 자주 나온다고 꼽은 주제입니다.</li>
-  <li><span class="tag t-지원서">지원서</span> 제출한 지원서 내용을 바탕으로 만든 질문입니다.</li>
-  <li><span class="tag t-예상">예상</span> 올해 바뀐 면접 방식과 공고 내용에 맞춰 만든 질문입니다.</li>
-  <li>Half-Day 면접은 2026년 하반기에 처음 도입되어, 정리 시점까지 <b>실제 응시 후기는 찾지 못했습니다</b>. PT 시나리오, 토론 주제, 시각자료 문항은 모두 예상입니다.</li>
-  <li>기술 설명은 SK하이닉스 뉴스룸의 공개 글과 일반 전공 지식을 근거로 했습니다. 실제 라인의 설비와 조건은 공개되지 않았으니 단정해서 말하지 마세요.</li>
-  <li>회사 소식(투자, 양산 일정 등)은 바뀔 수 있습니다. 면접 전날 뉴스룸에서 다시 확인하세요.</li>
   </ul></div></details>`}
 
 /* ---------- 질문·답안 노트 ---------- */

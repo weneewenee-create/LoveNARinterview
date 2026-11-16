@@ -4,7 +4,9 @@ const seg=(name,opts,cur)=>`<span class="seg" data-seg="${name}">${opts.map(([v,
 function bindSeg(o){$$('[data-seg]').forEach(s=>$$('button',s).forEach(b=>b.onclick=()=>{$$('button',s).forEach(x=>x.classList.remove('on'));b.classList.add('on');o[s.dataset.seg]=b.dataset.v}))}
 const backRow=`<div class="row" style="margin-top:16px"><button class="btn ghost" type="button" id="backHome">← 처음으로</button></div>`;
 function renderSetup(mode){
+  camOff();
   if(mode==='book')return renderBook(); if(mode==='notes')return renderNotes(); if(mode==='hist')return renderHist();
+  if(mode==='flow')return renderFlow(); if(mode==='full')return renderFullSetup(); if(mode==='aiv')return renderAiv(); if(mode==='prm')return renderPrm();
   const v=view(),o={};
   if(mode==='deep'){
     o.n='13';o.fb='now';
@@ -15,14 +17,16 @@ function renderSetup(mode){
     <div class="row" style="margin-top:12px"><button class="btn pri" type="button" id="startBtn">시작하기</button></div></div>${backRow}`;
     $('#startBtn').onclick=()=>startSession('deep','심층 인터뷰',buildDeep(+o.n,o.fb==='end'),{});
   }else if(mode==='ask'){
-    o.prep='20';o.scope='pkg';
+    o.prep='60';o.scope='pkg';
     v.innerHTML=`<section class="hero"><h1>A!SK 모의</h1><p>질문이 뜨면 준비 시간 뒤에 답변 시간이 시작되고, 시간이 끝나면 다음 질문으로 자동으로 넘어갑니다. 채점과 예시 답변은 모두 끝난 뒤에 나옵니다.</p></section>
-    <div class="card"><div class="h4" style="margin-top:0">문항당 준비 시간</div>${seg('prep',[['10','10초'],['20','20초'],['30','30초']],o.prep)}
+    <div class="card"><div class="h4" style="margin-top:0">문항당 준비 시간</div>${seg('prep',[['30','30초'],['60','1분'],['90','1분 30초']],o.prep)}
     <div class="h4">직무 문항 범위</div>${seg('scope',[['pkg','PKG개발 중심'],['mfg','양산기술 포함']],o.scope)}
     <label class="row small" style="margin-top:12px"><input type="checkbox" id="autoMic" ${SR?'checked':'disabled'}> 답변 시간이 시작되면 음성 인식 자동으로 켜기</label>
-    <p class="small">2026년 상반기 A!SK 후기(자기소개·지원동기 각 1분, 직무 문항, 시간이 지나면 자동 넘김, 마지막은 시각자료 해석)를 참고한 구성입니다. 실제 문항 수와 준비 시간은 다를 수 있습니다.</p>
+    <label class="row small" style="margin-top:8px"><input type="checkbox" id="askLock" checked> 답변을 시작하고 30초가 지나야 넘길 수 있게 하기</label>
+    <label class="row small" style="margin-top:8px"><input type="checkbox" id="askCam"> 카메라로 내 모습을 보면서 답하기 (녹화하거나 전송하지 않습니다)</label>
+    <p class="small">2026년 상반기 응시 후기의 방식에 맞췄습니다: 공통 3문항과 직무 4문항, 질문마다 준비 1분(건너뛸 수 있음), 답변은 공통 30초~1분·직무 30초~3분. 2025년 하반기 후기에는 준비 90초로 적혀 있습니다. 이번 면접에서는 면접장 안 별도 공간에서 보며, 문항 수와 시간이 같은지는 확인되지 않았습니다. 그래프 해석 문항은 예상으로 넣은 것입니다.</p>${srcHtml(['gong','ask26','ask25','econo'])}
     <div class="row" style="margin-top:12px"><button class="btn pri" type="button" id="startBtn">시작하기</button></div></div>${backRow}`;
-    $('#startBtn').onclick=()=>startSession('ask','A!SK 모의',buildAsk({prep:+o.prep,mfg:o.scope==='mfg'}),{voiceAuto:$('#autoMic').checked});
+    $('#startBtn').onclick=()=>startSession('ask','A!SK 모의',buildAsk({prep:+o.prep,mfg:o.scope==='mfg',lock:$('#askLock').checked}),{voiceAuto:$('#autoMic').checked,cam:$('#askCam').checked});
   }else if(mode==='pt'){
     o.min='30';
     v.innerHTML=`<section class="hero"><h1>문제해결 PT</h1><p>시나리오를 고르면 준비 → 발표 → 면접관의 후속 질문 순서로 진행합니다. 실제 과제는 공개된 것이 없어, 직무 내용을 바탕으로 만든 예상 시나리오입니다.</p></section>
@@ -58,31 +62,7 @@ function buildDeep(n,defer){
     :['I01','I02','I03','R102',...pick(['R101','R104','R105','R106','R107'],2),'R201',...pick(['R202','R203','R204'],1),...pick(['P03','P04','P05','P09','P10','P13'],2),'I06',...pick(['F01','F02','F04','F05','F09','F11'],1),'E01'];
   return ids.map(id=>qStep(id,{defer:!!defer}));
 }
-function buildAsk(o){
-  const p1=['I01','I02',...pick(['F01','F02','F04','F05'],1)];
-  const tech=o.mfg?[...pick(['P01','P03','P04','P05','P09','P12'],2),...pick(['M01','M02','M04'],1)]:pick(['P01','P02','P03','P04','P05','P07','P09','P10','P12','P13'],3);
-  const vis=pick(o.mfg?['V3','V4']:['V1','V2','V4'],1);
-  const secOf=id=>(id==='I01'||id==='I02')?60:(QMAP[id].chart?120:90);
-  return [...p1.map(id=>[id,'Part 1 · 인성']),...tech.map(id=>[id,'Part 2 · 직무']),...vis.map(id=>[id,'Part 2 · 직무 (시각자료 해석)'])]
-    .map(([id,label])=>qStep(id,{sec:secOf(id),prep:o.prep,auto:true,defer:true,label}));
-}
 function startFree(ids){startSession('free','자유 연습',ids.map(id=>qStep(id)),{})}
-function startPt(pt,min){
-  const steps=[{type:'ptprep',pt,sec:min*60},
-    {type:'q',q:{id:pt.id+'~pres',q:'준비한 내용을 3분 안에 발표해 보세요. 권고안(결론)부터 말하고, 근거 → 검증 계획 → 리스크 순서로.',ptPres:true},sec:180,defer:true,label:'발표'},
-    ...pt.f.map((f,i)=>({type:'q',q:{id:pt.id+'~f'+i,q:f[0],hint:f[1],isFollow:true},sec:60,label:`면접관의 후속 질문 ${i+1} / ${pt.f.length}`}))];
-  startSession('pt','문제해결 PT',steps,{pt});
-}
-function startGd(g){
-  const opp=pick(g.opp,2),topic=`<div class="why"><b>주제</b> ${esc(g.topic)}</div>`;
-  const card=t=>topic+`<div class="opp"><small>다른 지원자의 발언</small>${esc(t)}</div>`;
-  const mk=(kind,n,q,sec,context,label)=>({type:'q',q:{id:g.id+'~'+n,q,gd:kind},sec,context,label});
-  startSession('gd','Group Discussion',[{type:'think',g,sec:60},
-    mk('first',1,'첫 발언입니다. 본인의 입장과 근거를 1분 안에 말해 보세요.',60,topic,'첫 발언'),
-    mk('bridge',2,'이 의견을 받아서 이어 말해 보세요. 인정할 점을 먼저 말하고, 본인 의견을 보완하거나 제안으로 연결합니다.',60,card(opp[0]),'받아서 잇기 ①'),
-    mk('bridge',3,'한 번 더, 이 의견을 받아서 이어 말해 보세요.',60,card(opp[1]||opp[0]),'받아서 잇기 ②'),
-    mk('wrap',4,'토론을 마무리하는 정리 발언을 해 보세요. 나온 의견의 공통점과 결론을 40초 안에.',45,topic,'정리 발언')],{g});
-}
 
 /* ---------- 진행 ---------- */
 const S={mode:'',title:'',steps:[],i:0,res:[],opts:{},saved:false,at:0};
@@ -92,6 +72,7 @@ function bindHead(){const b=$('#quitBtn');if(b)b.onclick=()=>go(renderReview)}
 function next(){S.i++;go(renderStep)}
 function renderStep(){
   const st=S.steps[S.i];if(!st)return renderReview();
+  if(st.type==='stage')return renderStage(st);
   if(st.type==='ptprep')return renderPtPrep(st);
   if(st.type==='think')return renderThink(st);
   const q=st.q,real=QMAP[q.id];
@@ -103,8 +84,9 @@ function renderStep(){
       ${ctx}
       <div class="qtext">${esc(q.q)}</div>
       ${q.chart?chartSvg(q.chart):''}
+      ${S.opts.cam?'<video id="cam" autoplay muted playsinline style="width:100%;max-width:260px;border-radius:12px;display:block;margin:8px auto;transform:scaleX(-1);background:#000;aspect-ratio:4/3;object-fit:cover"></video><p class="small" style="text-align:center">답을 읽지 말고 카메라를 보고 말하세요.</p>':''}
       ${real&&!st.defer&&(real.why||[]).length?`<details class="small"><summary>면접관이 보려는 것 (막히면 열어 보기)</summary>${real.why.map(w=>`<div class="why">${esc(w)}</div>`).join('')}</details>`:''}
-      <p class="small">권장 답변 시간 ${mmss(st.sec)}${st.auto?' · 시간이 끝나면 자동으로 넘어갑니다':''}</p>
+      <p class="small">${st.auto?'답변 시간 최대 '+mmss(st.sec)+' · 시간이 끝나면 자동으로 넘어갑니다'+(st.minSec?' · '+st.minSec+'초가 지나야 넘길 수 있습니다':''):'권장 답변 시간 '+mmss(st.sec)}</p>
     </div>
     <div>
       <div class="card" id="ansCard">
@@ -112,7 +94,7 @@ function renderStep(){
         <div id="ansBox">
           <div class="voice-live" id="live"></div>
           <textarea id="ans" placeholder="말로 답하기를 누르고 말하거나, 직접 입력하세요." aria-label="답변"></textarea>
-          <div class="meter"><span id="cnt">0자</span><span>권장 약 ${Math.round(st.sec*5.2)}자</span></div>
+          <div class="meter"><span id="cnt">0자</span><span>권장 약 ${Math.round((st.scoreSec||st.sec)*5.2)}자</span></div>
           <div class="row">
             <button class="btn pri" type="button" id="micBtn">🎤 말로 답하기</button>
             <button class="btn" type="button" id="clearBtn">지우기</button><span class="sp"></span>
@@ -123,7 +105,7 @@ function renderStep(){
       </div>
       <div id="fb"></div>
     </div></div>`;
-  bindHead();
+  bindHead();camAttach();
   const ta=$('#ans'),cnt=()=>{$('#cnt').textContent=nchar(ta.value)+'자'};
   ta.value=store.get('draft.'+q.id,'');cnt();
   ta.oninput=()=>{cnt();store.set('draft.'+q.id,ta.value)};
@@ -136,6 +118,7 @@ function renderStep(){
   const begin=()=>{
     $('#prepBox').classList.add('hidden');$('#ansBox').classList.remove('hidden');
     timerStart({sec:st.sec,mode:st.auto?'down':'up',onEnd:st.auto?()=>submitAnswer(true):null});
+    if(st.minSec){const sb=$('#submitBtn');sb.disabled=true;setTimeout(()=>{const x=$('#submitBtn');if(x&&S.steps[S.i]===st)x.disabled=false},st.minSec*1000)}
     if(S.opts.voiceAuto)voiceStart(ta,ta.oninput);
     if(rc&&rc.checked)recStart();
     if(!isMobile&&!S.opts.voiceAuto)ta.focus({preventScroll:true});
@@ -151,7 +134,7 @@ function submitAnswer(auto){
   const text=ta.value.trim();
   if(!auto&&!text&&!st.defer){toast('답변을 말하거나 적어 주세요.');return}
   const used=timerElapsed();voiceStop();recStop();timerStop();
-  let sc=null;if(q.gd)sc=scoreGd(q.gd,text);else if(q.k&&q.k.length)sc=scoreAnswer(q,text,st.sec);
+  let sc=null;if(q.gd)sc=scoreGd(q.gd,text);else if(q.k&&q.k.length)sc=scoreAnswer(q,text,st.scoreSec||st.sec);
   const r={id:q.id,q:q.q,text,used,sec:st.sec,sc,gd:q.gd||null,follow:!!q.isFollow,hint:q.hint||'',parent:q.parent||null};
   S.res.push(r);store.del('draft.'+q.id);
   if(sc&&!q.gd&&QMAP[q.id])store.set('last.'+q.id,{s:sc.total,at:Date.now()});
@@ -210,14 +193,15 @@ function renderPtPrep(st){
     <div class="card"><div class="h4" style="margin-top:0">답안 정리 — 준비 시간 ${Math.round(st.sec/60)}분</div>
     ${PT_FIELDS.map((f,i)=>`<label for="pf${i}" style="font-weight:700;display:block;margin-top:10px">${f[0]}</label><textarea class="sm" id="pf${i}" placeholder="${esc(f[1])}">${esc(memo[i]||'')}</textarea>`).join('')}
     <div class="row" style="margin-top:12px"><span class="sp"></span><button class="btn pri" type="button" id="toPres">발표하러 가기 →</button></div></div>
-    <details class="card" style="margin-top:12px" open><summary>AI(LLM)는 이렇게 쓰세요</summary><div class="body"><ul class="clean">
-      <li>실제 면접에서는 면접장 PC의 전용 LLM을 씁니다. <b>이 페이지에는 AI가 들어 있지 않으니</b>, 연습할 때는 평소 쓰는 AI 도구를 옆 창에 띄워 두세요.</li>
+    ${ptAiHtml(pt)}<details class="card" style="margin-top:12px" open><summary>AI(LLM)는 이렇게 쓰세요</summary><div class="body"><ul class="clean">
+      <li>실제 면접에서는 면접장 PC의 전용 LLM을 씁니다. 위의 <b>모의 AI는 미리 써 둔 답</b>으로 검증 연습을 하는 용도입니다. 자유롭게 묻는 연습까지 하려면 평소 쓰는 AI 도구를 옆 창에 띄워 두세요.</li>
+      <li>회사의 AI 해커톤 예선 후기에는 질문 횟수 제한과 질문 사이 대기 시간이 있었다고 적혀 있습니다. 면접의 LLM이 같다는 근거는 없지만, 질문을 아껴 쓰는 연습을 해 두세요.</li>
       <li>처음 5분은 AI 없이 ①과 ②를 직접 적습니다. 문제 정의는 본인이 해야 합니다.</li>
       <li>AI에게는 답을 묻지 말고 <b>"내가 놓친 원인"과 "내 논리의 약점"</b>을 물으세요.</li>
       <li>AI의 답은 주어진 자료와 맞는 것, 본인이 설명할 수 있는 것만 남깁니다. 버린 것과 이유를 기억해 두면 후속 질문에 쓸 수 있습니다.</li>
-      <li>실제 제출 형식은 공개되지 않았습니다. 어떤 형식이든 결론 → 근거 → 검증 → 리스크 순서면 됩니다.</li></ul>${srcHtml(['half1','press'])}</div></details>
+      <li>실제 제출 형식은 공개되지 않았습니다. 어떤 형식이든 결론 → 근거 → 검증 → 리스크 순서면 됩니다.</li></ul>${srcHtml(['nr_thw','etnews','hackblog'])}</div></details>
   </div></div>`;
-  bindHead();
+  bindHead();bindPtAi(pt);
   $$('textarea',view()).forEach((ta,i)=>ta.oninput=()=>{const m=store.get('pt.'+pt.id,[]);m[i]=ta.value;store.set('pt.'+pt.id,m)});
   timerStart({sec:st.sec,mode:'down',onEnd:()=>toast('준비 시간이 끝났어요. 정리되는 대로 발표로 넘어가세요.',6000)});
   $('#toPres').onclick=next;
@@ -250,18 +234,18 @@ function saveHist(){
   const h=store.get('hist',[]);h.unshift(sess);store.set('hist',h.slice(0,20));S.sess=sess;
 }
 function renderReview(){
-  leaveRun();saveHist();
+  leaveRun();camOff();saveHist();
   const scored=S.res.filter(r=>r.sc&&!r.gd),avg=scored.length?Math.round(scored.reduce((a,r)=>a+r.sc.total,0)/scored.length):null;
   const pt=S.opts.pt,g=S.opts.g;
   let extra='';
   if(pt)extra=`<div class="card" style="margin:12px 0"><div class="h4" style="margin-top:0">예시 접근 — ${esc(pt.title)}</div><div class="model">${fmt(pt.m)}</div>${srcHtml(pt.s)}
     <div class="h4">자기 점검</div><div class="chk">${['문제를 한 문장으로 정의하고 시작했다','원인 가설에 우선순위와 그 근거를 붙였다','가설마다 무엇으로 확인할지 말했다','반박에는 근거로 답했고, 모르는 것은 모른다고 했다','내 경험을 한 번 이상 연결했다','AI가 준 내용 중 버린 것과 그 이유를 설명할 수 있다'].map(c=>`<label><input type="checkbox">${c}</label>`).join('')}</div>
     <p class="small">공식 평가 기준이 아니라, 채용 설명 내용과 모의면접 평가 항목을 참고해 만든 점검표입니다.</p></div>`;
-  if(g)extra=`<div class="card" style="margin:12px 0"><div class="h4" style="margin-top:0">${esc(g.topic)}</div><div class="two"><div><b>한쪽 입장</b><ul class="clean">${g.pro.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div><div><b>다른 입장</b><ul class="clean">${g.con.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div></div>
+  if(g)extra+=`<div class="card" style="margin:12px 0"><div class="h4" style="margin-top:0">${esc(g.topic)}</div><div class="two"><div><b>한쪽 입장</b><ul class="clean">${g.pro.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div><div><b>다른 입장</b><ul class="clean">${g.con.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div></div>
     <div class="h4">예시 발언</div><div class="model">${fmt(g.m)}</div><p class="small">어느 입장을 골랐는지는 중요하지 않습니다. 상대의 말을 받아서 본인 의견을 고치는 장면이 있었는지 확인하세요.</p></div>`;
   view().innerHTML=`<section class="hero"><h1>${esc(S.title)} 결과</h1><p>${S.res.length?`답변 ${S.res.length}개${avg!=null?` · 자동 점수 평균 <b>${avg}점</b> (참고용)`:''}. 아래에서 문항별로 내 답변과 예시 답변을 비교해 보세요.`:'제출한 답변이 없습니다.'}</p></section>
   ${S.res.length?`<div class="row"><button class="btn pri" type="button" id="expCopy">답안 내보내기 (복사)</button><button class="btn" type="button" id="expShare">공유</button></div>`:''}
-  ${extra}
+  ${extra}${aiLogHtml()}
   ${S.res.map((r,i)=>`<details class="qitem" ${i===0?'open':''}><summary><span class="qq">${r.follow?'↳ ':''}${esc(r.q)}</span>${r.sc?`<span class="last">${r.sc.total}점</span>`:''}</summary><div class="in"><div class="h4">내 답변</div><p style="white-space:pre-wrap">${esc(r.text)||'<span class="small">(답변 없음)</span>'}</p>${fbHtml(r,true)}</div></details>`).join('')}
   <div class="row" style="margin-top:16px"><button class="btn" type="button" id="againBtn">같은 모드 다시</button><button class="btn" type="button" id="homeBtn2">처음으로</button></div>`;
   const ec=$('#expCopy');if(ec){ec.onclick=()=>copyText(exportText(S.sess));$('#expShare').onclick=()=>shareText(exportText(S.sess))}
@@ -269,13 +253,3 @@ function renderReview(){
   $('#homeBtn2').onclick=()=>go(renderHome);
 }
 
-/* ---------- 시작 ---------- */
-(function init(){
-  const root=document.documentElement,saved=store.get('theme',null);
-  root.dataset.theme=saved||((window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light');
-  $('#themeBtn').onclick=()=>{root.dataset.theme=root.dataset.theme==='dark'?'light':'dark';store.set('theme',root.dataset.theme)};
-  $('#dday').textContent=ddayText();
-  $('#homeBtn').onclick=()=>{if(S.res.length&&!S.saved)saveHist();go(renderHome)};
-  window.addEventListener('pagehide',()=>{if(S.res.length&&!S.saved)saveHist()});
-  renderHome();
-})();
